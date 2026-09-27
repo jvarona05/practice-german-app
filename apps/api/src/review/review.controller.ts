@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Param, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { IsIn } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CardsService } from '../cards/cards.service';
 
 class RateDto {
+  @IsIn(['again', 'good', 'easy'])
   action: 'again' | 'good' | 'easy';
 }
 

@@ -4,13 +4,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { Card, RatingAction } from '@german-app/shared';
 
-type ReviewState = 'loading' | 'empty' | 'card' | 'revealed' | 'done';
+type ReviewState = 'loading' | 'empty' | 'card' | 'done';
 
 export default function ReviewPage() {
   const [queue, setQueue] = useState<Card[]>([]);
   const [reviewState, setReviewState] = useState<ReviewState>('loading');
   const [ratingLoading, setRatingLoading] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
+  const [showTranslation, setShowTranslation] = useState(false);
 
   const currentCard = queue[0] ?? null;
 
@@ -32,12 +33,26 @@ export default function ReviewPage() {
 
   // Auto-play when a new card appears
   useEffect(() => {
-    if (reviewState === 'card' && currentCard) {
-      speakGerman(currentCard.german);
-    }
-  }, [currentCard?.id, reviewState, speakGerman]);
+    if (!currentCard || reviewState !== 'card') return;
 
-  const handleReveal = () => setReviewState('revealed');
+    // Cancel any previous speech
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    // Small delay to ensure speech synthesis is ready
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel(); // Ensure clean state
+        const utterance = new SpeechSynthesisUtterance(currentCard.german);
+        utterance.lang = 'de-DE';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [currentCard?.id, reviewState]);
 
   const handleRate = async (action: RatingAction) => {
     if (!currentCard || ratingLoading) return;
@@ -60,6 +75,7 @@ export default function ReviewPage() {
     setCompletedCount((n) => (action !== 'again' ? n + 1 : n));
 
     setRatingLoading(false);
+    setShowTranslation(false);
 
     setQueue((current) => {
       if (current.length === 0) setReviewState('done');
@@ -120,7 +136,13 @@ export default function ReviewPage() {
 
       {/* Card */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 min-h-48 flex flex-col items-center justify-center gap-4 text-center">
-        <p className="text-2xl font-semibold leading-snug">{currentCard.german}</p>
+        <button
+          onClick={() => setShowTranslation(!showTranslation)}
+          className="text-2xl font-semibold leading-snug hover:text-brand-500 transition-colors cursor-pointer"
+          title="Click to toggle translation"
+        >
+          {currentCard.german}
+        </button>
 
         <button
           onClick={() => speakGerman(currentCard.german)}
@@ -130,7 +152,7 @@ export default function ReviewPage() {
           ▶ Replay
         </button>
 
-        {(reviewState === 'revealed') && (
+        {showTranslation && (
           <div className="border-t border-gray-100 w-full pt-4 mt-2">
             <p className="text-gray-600">{currentCard.translation}</p>
             <span className="text-xs text-gray-400">{currentCard.translationLang === 'es' ? 'Spanish' : 'English'}</span>
@@ -138,41 +160,30 @@ export default function ReviewPage() {
         )}
       </div>
 
-      {/* Actions */}
-      {reviewState === 'card' && (
+      {/* Rating buttons - always visible */}
+      <div className="grid grid-cols-3 gap-3">
         <button
-          onClick={handleReveal}
-          className="w-full bg-gray-900 text-white rounded-xl py-4 font-semibold"
+          onClick={() => handleRate('again')}
+          disabled={ratingLoading}
+          className="bg-red-50 border border-red-200 text-red-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
         >
-          Show translation
+          Again
         </button>
-      )}
-
-      {reviewState === 'revealed' && (
-        <div className="grid grid-cols-3 gap-3">
-          <button
-            onClick={() => handleRate('again')}
-            disabled={ratingLoading}
-            className="bg-red-50 border border-red-200 text-red-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-          >
-            Again
-          </button>
-          <button
-            onClick={() => handleRate('good')}
-            disabled={ratingLoading}
-            className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-          >
-            Good
-          </button>
-          <button
-            onClick={() => handleRate('easy')}
-            disabled={ratingLoading}
-            className="bg-green-50 border border-green-200 text-green-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-          >
-            Easy
-          </button>
-        </div>
-      )}
+        <button
+          onClick={() => handleRate('good')}
+          disabled={ratingLoading}
+          className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
+        >
+          Good
+        </button>
+        <button
+          onClick={() => handleRate('easy')}
+          disabled={ratingLoading}
+          className="bg-green-50 border border-green-200 text-green-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
+        >
+          Easy
+        </button>
+      </div>
     </div>
   );
 }

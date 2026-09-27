@@ -8,7 +8,23 @@ import { SuggestedCard } from '@german-app/shared';
 export class CardsService {
   constructor(@InjectModel(Card.name) private cardModel: Model<Card>) {}
 
-  async createMany(userId: string, cards: SuggestedCard[]): Promise<Card[]> {
+  private toCardDTO(doc: Card) {
+    return {
+      id: (doc._id || doc.id).toString(),
+      userId: (doc.userId instanceof Types.ObjectId ? doc.userId.toString() : doc.userId),
+      german: doc.german,
+      translation: doc.translation,
+      translationLang: doc.translationLang,
+      type: doc.type,
+      strength: doc.strength,
+      dueDate: doc.dueDate.toISOString(),
+      lastReviewedAt: doc.lastReviewedAt?.toISOString(),
+      reviewCount: doc.reviewCount,
+      createdAt: (doc as any).createdAt?.toISOString() || new Date().toISOString(),
+    };
+  }
+
+  async createMany(userId: string, cards: SuggestedCard[]) {
     const now = new Date();
     const docs = cards.map((c) => ({
       userId: new Types.ObjectId(userId),
@@ -20,27 +36,30 @@ export class CardsService {
       dueDate: now,
       reviewCount: 0,
     }));
-    return this.cardModel.insertMany(docs);
+    const created = await this.cardModel.insertMany(docs);
+    return created.map((doc) => this.toCardDTO(doc));
   }
 
-  async findByUser(userId: string): Promise<Card[]> {
-    return this.cardModel
+  async findByUser(userId: string) {
+    const cards = await this.cardModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 });
+    return cards.map((doc) => this.toCardDTO(doc));
   }
 
-  async findDueCards(userId: string, limit = 20): Promise<Card[]> {
+  async findDueCards(userId: string, limit = 20) {
     const now = new Date();
-    return this.cardModel
+    const cards = await this.cardModel
       .find({
         userId: new Types.ObjectId(userId),
         dueDate: { $lte: now },
       })
       .sort({ strength: 1, dueDate: 1 })
       .limit(limit);
+    return cards.map((doc) => this.toCardDTO(doc));
   }
 
-  async applyRating(cardId: string, action: 'again' | 'good' | 'easy'): Promise<Card | null> {
+  async applyRating(cardId: string, action: 'again' | 'good' | 'easy') {
     const card = await this.cardModel.findById(cardId);
     if (!card) return null;
 
@@ -51,7 +70,8 @@ export class CardsService {
     card.lastReviewedAt = new Date();
     card.reviewCount += 1;
 
-    return card.save();
+    const saved = await card.save();
+    return this.toCardDTO(saved);
   }
 
   async getStats(userId: string) {
