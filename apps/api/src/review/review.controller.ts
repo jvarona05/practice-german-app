@@ -19,6 +19,12 @@ export class ReviewController {
     return this.cardsService.findDueCards(req.user.userId, 20);
   }
 
+  // GET /api/review/practice — returns all cards sorted by weakest first
+  @Get('practice')
+  getPracticeSession(@Request() req: { user: { userId: string } }) {
+    return this.cardsService.findPracticeCards(req.user.userId, 30);
+  }
+
   // POST /api/review/:cardId/rate — submit rating, update strength + dueDate
   @Post(':cardId/rate')
   async rateCard(

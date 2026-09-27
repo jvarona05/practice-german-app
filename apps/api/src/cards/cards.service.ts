@@ -59,6 +59,14 @@ export class CardsService {
     return cards.map((doc) => this.toCardDTO(doc));
   }
 
+  async findPracticeCards(userId: string, limit = 30) {
+    const cards = await this.cardModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .sort({ strength: 1, dueDate: 1 })
+      .limit(limit);
+    return cards.map((doc) => this.toCardDTO(doc));
+  }
+
   async applyRating(cardId: string, action: 'again' | 'good' | 'easy') {
     const card = await this.cardModel.findById(cardId);
     if (!card) return null;

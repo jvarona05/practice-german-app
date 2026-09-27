@@ -67,6 +67,7 @@ export const api = {
   },
   review: {
     getSession: () => request<Card[]>('/review/session'),
+    getPracticeSession: () => request<Card[]>('/review/practice'),
     rate: (cardId: string, action: RatingAction) =>
       request<Card>(`/review/${cardId}/rate`, {
         method: 'POST',

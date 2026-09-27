@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { Card, RatingAction } from '@german-app/shared';
 
 type ReviewState = 'loading' | 'empty' | 'card' | 'done';
 
 export default function ReviewPage() {
+  const searchParams = useSearchParams();
+  const isPracticeMode = searchParams.get('mode') === 'practice';
+
   const [queue, setQueue] = useState<Card[]>([]);
   const [reviewState, setReviewState] = useState<ReviewState>('loading');
   const [ratingLoading, setRatingLoading] = useState(false);
@@ -25,11 +29,12 @@ export default function ReviewPage() {
   }, []);
 
   useEffect(() => {
-    api.review.getSession().then((cards) => {
+    const fetch = isPracticeMode ? api.review.getPracticeSession : api.review.getSession;
+    fetch().then((cards) => {
       setQueue(cards);
       setReviewState(cards.length === 0 ? 'empty' : 'card');
     }).catch(console.error);
-  }, []);
+  }, [isPracticeMode]);
 
   // Auto-play when a new card appears
   useEffect(() => {

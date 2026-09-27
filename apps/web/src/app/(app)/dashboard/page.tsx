@@ -33,12 +33,31 @@ export default function DashboardPage() {
       )}
 
       <div className="flex flex-col gap-3">
-        <Link
-          href="/review"
-          className="w-full bg-brand-500 hover:bg-brand-600 text-white text-center rounded-xl py-4 font-semibold text-base"
-        >
-          Start review {stats?.dueToday ? `(${stats.dueToday} due)` : ''}
-        </Link>
+        {stats && stats.dueToday > 0 ? (
+          <Link
+            href="/review"
+            className="w-full bg-brand-500 hover:bg-brand-600 text-white text-center rounded-xl py-4 font-semibold text-base"
+          >
+            Start review ({stats.dueToday} due)
+          </Link>
+        ) : (
+          <>
+            <Link
+              href="/review"
+              className="w-full bg-gray-200 text-gray-400 text-center rounded-xl py-4 font-semibold text-base cursor-default pointer-events-none"
+            >
+              No cards due today
+            </Link>
+            {stats && stats.totalCards > 0 && (
+              <Link
+                href="/review?mode=practice"
+                className="w-full bg-brand-500 hover:bg-brand-600 text-white text-center rounded-xl py-4 font-semibold text-base"
+              >
+                Practice anyway ({stats.totalCards} cards)
+              </Link>
+            )}
+          </>
+        )}
         <Link
           href="/add-lesson"
           className="w-full border border-brand-500 text-brand-500 hover:bg-brand-50 text-center rounded-xl py-4 font-semibold text-base"
