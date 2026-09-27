@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Request, BadRequestException, Query } from '@nestjs/common';
 import { IsIn } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CardsService } from '../cards/cards.service';
@@ -19,10 +19,13 @@ export class ReviewController {
     return this.cardsService.findDueCards(req.user.userId, 20);
   }
 
-  // GET /api/review/practice — returns all cards sorted by weakest first
+  // GET /api/review/practice?offset=0 — returns 15 cards sorted by weakest first, paginated
   @Get('practice')
-  getPracticeSession(@Request() req: { user: { userId: string } }) {
-    return this.cardsService.findPracticeCards(req.user.userId, 30);
+  getPracticeSession(
+    @Request() req: { user: { userId: string } },
+    @Query('offset') offset?: string,
+  ) {
+    return this.cardsService.findPracticeCards(req.user.userId, 15, Number(offset) || 0);
   }
 
   // POST /api/review/:cardId/rate — submit rating, update strength + dueDate

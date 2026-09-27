@@ -1,21 +1,26 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { Card, RatingAction } from '@german-app/shared';
 
 type ReviewState = 'loading' | 'empty' | 'card' | 'done';
 
+const BATCH_SIZE = 15;
+
 export default function ReviewPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const isPracticeMode = searchParams.get('mode') === 'practice';
+  const practiceOffset = Number(searchParams.get('offset') || 0);
 
   const [queue, setQueue] = useState<Card[]>([]);
   const [reviewState, setReviewState] = useState<ReviewState>('loading');
   const [ratingLoading, setRatingLoading] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [practiceTotal, setPracticeTotal] = useState(0);
 
   const currentCard = queue[0] ?? null;
 
@@ -29,26 +34,34 @@ export default function ReviewPage() {
   }, []);
 
   useEffect(() => {
-    const fetch = isPracticeMode ? api.review.getPracticeSession : api.review.getSession;
-    fetch().then((cards) => {
-      setQueue(cards);
-      setReviewState(cards.length === 0 ? 'empty' : 'card');
-    }).catch(console.error);
-  }, [isPracticeMode]);
+    setReviewState('loading');
+    setCompletedCount(0);
+
+    if (isPracticeMode) {
+      api.review.getPracticeSession(practiceOffset).then(({ cards, total }) => {
+        setQueue(cards);
+        setPracticeTotal(total);
+        setReviewState(cards.length === 0 ? 'empty' : 'card');
+      }).catch(console.error);
+    } else {
+      api.review.getSession().then((cards) => {
+        setQueue(cards);
+        setReviewState(cards.length === 0 ? 'empty' : 'card');
+      }).catch(console.error);
+    }
+  }, [isPracticeMode, practiceOffset]);
 
   // Auto-play when a new card appears
   useEffect(() => {
     if (!currentCard || reviewState !== 'card') return;
 
-    // Cancel any previous speech
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
 
-    // Small delay to ensure speech synthesis is ready
     const timer = setTimeout(() => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel(); // Ensure clean state
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(currentCard.german);
         utterance.lang = 'de-DE';
         utterance.rate = 0.9;
@@ -72,7 +85,6 @@ export default function ReviewPage() {
     setQueue((prev) => {
       const [head, ...rest] = prev;
       if (action === 'again') {
-        // push to back of queue
         return [...rest, head];
       }
       return rest;
@@ -87,6 +99,11 @@ export default function ReviewPage() {
       else setReviewState('card');
       return current;
     });
+  };
+
+  const handleNextBatch = () => {
+    const nextOffset = (practiceOffset + BATCH_SIZE) % practiceTotal;
+    router.push(`/review?mode=practice&offset=${nextOffset}`);
   };
 
   if (reviewState === 'loading') {
@@ -104,24 +121,47 @@ export default function ReviewPage() {
   }
 
   if (reviewState === 'done') {
+    const nextOffset = (practiceOffset + BATCH_SIZE) % practiceTotal;
+    const batchLabel = isPracticeMode
+      ? `Batch ${Math.floor(practiceOffset / BATCH_SIZE) + 1} of ${Math.ceil(practiceTotal / BATCH_SIZE)}`
+      : null;
+
     return (
       <div className="text-center space-y-4 pt-16">
         <div className="text-4xl">✓</div>
         <h2 className="text-xl font-bold">Session complete</h2>
+        {batchLabel && <p className="text-gray-400 text-xs">{batchLabel}</p>}
         <p className="text-gray-500 text-sm">{completedCount} cards reviewed.</p>
         <div className="flex flex-col gap-3 mt-6">
-          <button
-            onClick={() => {
-              setCompletedCount(0);
-              api.review.getSession().then((cards) => {
-                setQueue(cards);
-                setReviewState(cards.length === 0 ? 'empty' : 'card');
-              });
-            }}
-            className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
-          >
-            Another round
-          </button>
+          {isPracticeMode ? (
+            <>
+              <button
+                onClick={handleNextBatch}
+                className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
+              >
+                Next batch ({nextOffset + 1}–{Math.min(nextOffset + BATCH_SIZE, practiceTotal)} of {practiceTotal})
+              </button>
+              <button
+                onClick={() => router.push(`/review?mode=practice&offset=${practiceOffset}`)}
+                className="w-full border border-gray-300 text-gray-600 rounded-xl py-3 font-medium"
+              >
+                Repeat this batch
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                setCompletedCount(0);
+                api.review.getSession().then((cards) => {
+                  setQueue(cards);
+                  setReviewState(cards.length === 0 ? 'empty' : 'card');
+                });
+              }}
+              className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
+            >
+              Another round
+            </button>
+          )}
           <a href="/dashboard" className="w-full border border-gray-300 text-gray-600 rounded-xl py-3 font-medium text-center block">
             Back to dashboard
           </a>
@@ -137,6 +177,11 @@ export default function ReviewPage() {
       <div className="flex items-center justify-between text-sm text-gray-400">
         <span>{completedCount} done</span>
         <span>{queue.length} remaining</span>
+        {isPracticeMode && (
+          <span className="text-xs">
+            Batch {Math.floor(practiceOffset / BATCH_SIZE) + 1}/{Math.ceil(practiceTotal / BATCH_SIZE)}
+          </span>
+        )}
       </div>
 
       {/* Card */}

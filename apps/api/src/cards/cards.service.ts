@@ -59,12 +59,15 @@ export class CardsService {
     return cards.map((doc) => this.toCardDTO(doc));
   }
 
-  async findPracticeCards(userId: string, limit = 30) {
+  async findPracticeCards(userId: string, limit = 15, offset = 0) {
+    const total = await this.cardModel.countDocuments({ userId: new Types.ObjectId(userId) });
+    const safeOffset = offset % (total || 1); // wrap around if offset exceeds total
     const cards = await this.cardModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ strength: 1, dueDate: 1 })
+      .skip(safeOffset)
       .limit(limit);
-    return cards.map((doc) => this.toCardDTO(doc));
+    return { cards: cards.map((doc) => this.toCardDTO(doc)), total, offset: safeOffset };
   }
 
   async applyRating(cardId: string, action: 'again' | 'good' | 'easy') {
