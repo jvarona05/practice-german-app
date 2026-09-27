@@ -23,7 +23,7 @@ export default function DashboardPage() {
 
       {stats && (
         <div className="grid grid-cols-2 gap-3">
-          <StatCard label="Due today" value={stats.dueToday} highlight />
+          <StatCard label="Due today" value={stats.dueToday} highlight={stats.dueToday > 0} />
           <StatCard label="New cards" value={stats.newCards} />
           <StatCard label="Learned" value={stats.learnedCards} />
           <StatCard label="Need practice" value={stats.needsReinforcement} />
@@ -33,30 +33,17 @@ export default function DashboardPage() {
       )}
 
       <div className="flex flex-col gap-3">
-        {stats && stats.dueToday > 0 ? (
+        {stats && stats.totalCards > 0 ? (
           <Link
             href="/review"
             className="w-full bg-brand-500 hover:bg-brand-600 text-white text-center rounded-xl py-4 font-semibold text-base"
           >
-            Start review ({stats.dueToday} due)
+            Practice {stats.dueToday > 0 ? `(${stats.dueToday} due)` : ''}
           </Link>
         ) : (
-          <>
-            <Link
-              href="/review"
-              className="w-full bg-gray-200 text-gray-400 text-center rounded-xl py-4 font-semibold text-base cursor-default pointer-events-none"
-            >
-              No cards due today
-            </Link>
-            {stats && stats.totalCards > 0 && (
-              <Link
-                href="/review?mode=practice"
-                className="w-full bg-brand-500 hover:bg-brand-600 text-white text-center rounded-xl py-4 font-semibold text-base"
-              >
-                Practice anyway ({stats.totalCards} cards)
-              </Link>
-            )}
-          </>
+          <span className="w-full bg-gray-200 text-gray-400 text-center rounded-xl py-4 font-semibold text-base cursor-default">
+            No cards yet
+          </span>
         )}
         <Link
           href="/add-lesson"

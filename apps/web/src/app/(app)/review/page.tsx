@@ -1,26 +1,19 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { Card, RatingAction } from '@german-app/shared';
 
 type ReviewState = 'loading' | 'empty' | 'card' | 'done';
-
-const BATCH_SIZE = 15;
+type SessionType = 'due' | 'practice' | null;
 
 export default function ReviewPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const isPracticeMode = searchParams.get('mode') === 'practice';
-  const practiceOffset = Number(searchParams.get('offset') || 0);
-
   const [queue, setQueue] = useState<Card[]>([]);
   const [reviewState, setReviewState] = useState<ReviewState>('loading');
   const [ratingLoading, setRatingLoading] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [practiceTotal, setPracticeTotal] = useState(0);
+  const [sessionType, setSessionType] = useState<SessionType>(null);
 
   const currentCard = queue[0] ?? null;
 
@@ -33,23 +26,21 @@ export default function ReviewPage() {
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  useEffect(() => {
+  const loadSession = useCallback(() => {
     setReviewState('loading');
     setCompletedCount(0);
+    setShowTranslation(false);
 
-    if (isPracticeMode) {
-      api.review.getPracticeSession(practiceOffset).then(({ cards, total }) => {
-        setQueue(cards);
-        setPracticeTotal(total);
-        setReviewState(cards.length === 0 ? 'empty' : 'card');
-      }).catch(console.error);
-    } else {
-      api.review.getSession().then((cards) => {
-        setQueue(cards);
-        setReviewState(cards.length === 0 ? 'empty' : 'card');
-      }).catch(console.error);
-    }
-  }, [isPracticeMode, practiceOffset]);
+    api.review.start().then(({ type, cards }) => {
+      setSessionType(type);
+      setQueue(cards);
+      setReviewState(cards.length === 0 ? 'empty' : 'card');
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
 
   // Auto-play when a new card appears
   useEffect(() => {
@@ -79,18 +70,15 @@ export default function ReviewPage() {
     try {
       await api.review.rate(currentCard.id, action);
     } catch {
-      // fire-and-forget; schedule update not critical for UX
+      // fire-and-forget
     }
 
     setQueue((prev) => {
       const [head, ...rest] = prev;
-      if (action === 'again') {
-        return [...rest, head];
-      }
+      if (action === 'again') return [...rest, head];
       return rest;
     });
     setCompletedCount((n) => (action !== 'again' ? n + 1 : n));
-
     setRatingLoading(false);
     setShowTranslation(false);
 
@@ -99,11 +87,6 @@ export default function ReviewPage() {
       else setReviewState('card');
       return current;
     });
-  };
-
-  const handleNextBatch = () => {
-    const nextOffset = (practiceOffset + BATCH_SIZE) % practiceTotal;
-    router.push(`/review?mode=practice&offset=${nextOffset}`);
   };
 
   if (reviewState === 'loading') {
@@ -115,53 +98,29 @@ export default function ReviewPage() {
       <div className="text-center space-y-3 pt-16">
         <div className="text-4xl">🎉</div>
         <h2 className="text-xl font-bold">All caught up!</h2>
-        <p className="text-gray-500 text-sm">No cards due right now. Come back later or add a new lesson.</p>
+        <p className="text-gray-500 text-sm">No cards yet. Add a new lesson to get started.</p>
+        <a href="/add-lesson" className="inline-block mt-4 bg-brand-500 text-white rounded-xl px-6 py-3 font-medium">
+          Add lesson
+        </a>
       </div>
     );
   }
 
   if (reviewState === 'done') {
-    const nextOffset = (practiceOffset + BATCH_SIZE) % practiceTotal;
-    const batchLabel = isPracticeMode
-      ? `Batch ${Math.floor(practiceOffset / BATCH_SIZE) + 1} of ${Math.ceil(practiceTotal / BATCH_SIZE)}`
-      : null;
-
     return (
       <div className="text-center space-y-4 pt-16">
         <div className="text-4xl">✓</div>
-        <h2 className="text-xl font-bold">Session complete</h2>
-        {batchLabel && <p className="text-gray-400 text-xs">{batchLabel}</p>}
+        <h2 className="text-xl font-bold">
+          {sessionType === 'due' ? 'Due cards done!' : 'Batch complete!'}
+        </h2>
         <p className="text-gray-500 text-sm">{completedCount} cards reviewed.</p>
         <div className="flex flex-col gap-3 mt-6">
-          {isPracticeMode ? (
-            <>
-              <button
-                onClick={handleNextBatch}
-                className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
-              >
-                Next batch ({nextOffset + 1}–{Math.min(nextOffset + BATCH_SIZE, practiceTotal)} of {practiceTotal})
-              </button>
-              <button
-                onClick={() => router.push(`/review?mode=practice&offset=${practiceOffset}`)}
-                className="w-full border border-gray-300 text-gray-600 rounded-xl py-3 font-medium"
-              >
-                Repeat this batch
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => {
-                setCompletedCount(0);
-                api.review.getSession().then((cards) => {
-                  setQueue(cards);
-                  setReviewState(cards.length === 0 ? 'empty' : 'card');
-                });
-              }}
-              className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
-            >
-              Another round
-            </button>
-          )}
+          <button
+            onClick={loadSession}
+            className="w-full bg-brand-500 text-white rounded-xl py-3 font-medium"
+          >
+            Practice more
+          </button>
           <a href="/dashboard" className="w-full border border-gray-300 text-gray-600 rounded-xl py-3 font-medium text-center block">
             Back to dashboard
           </a>
@@ -177,10 +136,8 @@ export default function ReviewPage() {
       <div className="flex items-center justify-between text-sm text-gray-400">
         <span>{completedCount} done</span>
         <span>{queue.length} remaining</span>
-        {isPracticeMode && (
-          <span className="text-xs">
-            Batch {Math.floor(practiceOffset / BATCH_SIZE) + 1}/{Math.ceil(practiceTotal / BATCH_SIZE)}
-          </span>
+        {sessionType === 'due' && (
+          <span className="text-xs text-orange-400 font-medium">Due cards</span>
         )}
       </div>
 
@@ -210,7 +167,7 @@ export default function ReviewPage() {
         )}
       </div>
 
-      {/* Rating buttons - always visible */}
+      {/* Rating buttons */}
       <div className="grid grid-cols-3 gap-3">
         <button
           onClick={() => handleRate('again')}

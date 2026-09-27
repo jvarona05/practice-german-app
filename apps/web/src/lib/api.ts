@@ -66,9 +66,8 @@ export const api = {
     list: () => request<Card[]>('/cards'),
   },
   review: {
-    getSession: () => request<Card[]>('/review/session'),
-    getPracticeSession: (offset = 0) =>
-      request<{ cards: Card[]; total: number; offset: number }>(`/review/practice?offset=${offset}`),
+    start: () =>
+      request<{ type: 'due' | 'practice'; cards: Card[]; total?: number; currentOffset?: number }>('/review/start'),
     rate: (cardId: string, action: RatingAction) =>
       request<Card>(`/review/${cardId}/rate`, {
         method: 'POST',

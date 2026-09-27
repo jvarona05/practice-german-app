@@ -26,4 +26,8 @@ export class UsersService {
       { new: true },
     );
   }
+
+  async updatePracticeOffset(userId: string, offset: number): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, { $set: { practiceOffset: offset } });
+  }
 }

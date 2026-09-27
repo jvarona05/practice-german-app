@@ -17,6 +17,9 @@ export class User extends Document {
     default: { autoPlayAudio: true },
   })
   settings: { autoPlayAudio: boolean };
+
+  @Prop({ default: 0 })
+  practiceOffset: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
