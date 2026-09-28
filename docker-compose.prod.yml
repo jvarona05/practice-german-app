@@ -1,0 +1,39 @@
+services:
+  german-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: german-learning-api
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      PORT: 3001
+      MONGODB_URI: mongodb://growth-path-mongo:27017/german-learning
+      JWT_SECRET: ${JWT_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      FRONTEND_URL: ${FRONTEND_URL}
+    networks:
+      - growth-path-network
+
+  german-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    container_name: german-learning-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    depends_on:
+      - german-api
+    networks:
+      - growth-path-network
+
+networks:
+  growth-path-network:
+    external: true
+    # Verify the exact name on your server with: docker network ls
+    name: growth-path-network
