@@ -23,7 +23,9 @@ AVOID:
 - Sentences that are too long or too specific to the conversation
 - Random sentences that are not reusable in other contexts
 - Trivial greetings unless they contain a useful nuance
-- More than 15 cards total — be selective, quality over quantity
+- Any sentence the learner already has in their collection (provided in context)
+
+Extract as many high-quality cards as the text warrants — do not artificially limit the count, but do not pad with low-quality entries either.
 
 For each card, choose the translation language (Spanish or English) that best helps the learner understand the meaning and nuance. Default to Spanish when unsure.
 
@@ -82,7 +84,6 @@ export class OpenAiProvider extends AiProvider {
                   required: ['german', 'translation', 'translationLang', 'type'],
                   additionalProperties: false,
                 },
-                maxItems: 15,
               },
             },
             required: ['cards'],

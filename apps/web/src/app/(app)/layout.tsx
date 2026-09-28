@@ -21,17 +21,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Link href="/dashboard" className="font-bold text-brand-500 text-lg">
           Deutsch
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/add-lesson" className="text-gray-600 hover:text-gray-900">
-            Add lesson
-          </Link>
-          <Link href="/review" className="text-gray-600 hover:text-gray-900">
-            Review
-          </Link>
-          <button onClick={logout} className="text-gray-400 hover:text-gray-600">
-            Logout
-          </button>
-        </nav>
+        <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600">
+          Logout
+        </button>
       </header>
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">{children}</main>
     </div>

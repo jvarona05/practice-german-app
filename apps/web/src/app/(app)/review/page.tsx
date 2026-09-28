@@ -132,8 +132,8 @@ export default function ReviewPage() {
   if (!currentCard) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between text-sm text-gray-400">
+    <div className="pb-36">
+      <div className="flex items-center justify-between text-sm text-gray-400 mb-6">
         <span>{completedCount} done</span>
         <span>{queue.length} remaining</span>
         {sessionType === 'due' && (
@@ -167,29 +167,31 @@ export default function ReviewPage() {
         )}
       </div>
 
-      {/* Rating buttons */}
-      <div className="grid grid-cols-3 gap-3">
-        <button
-          onClick={() => handleRate('again')}
-          disabled={ratingLoading}
-          className="bg-red-50 border border-red-200 text-red-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-        >
-          Again
-        </button>
-        <button
-          onClick={() => handleRate('good')}
-          disabled={ratingLoading}
-          className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-        >
-          Good
-        </button>
-        <button
-          onClick={() => handleRate('easy')}
-          disabled={ratingLoading}
-          className="bg-green-50 border border-green-200 text-green-600 rounded-xl py-4 font-medium text-sm disabled:opacity-50"
-        >
-          Easy
-        </button>
+      {/* Rating buttons — fixed at bottom for easy thumb reach */}
+      <div className="fixed bottom-0 left-0 right-0 px-5 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] bg-white/80 backdrop-blur-md border-t border-gray-100">
+        <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
+          <button
+            onClick={() => handleRate('again')}
+            disabled={ratingLoading}
+            className="bg-[#FF3B30] text-white rounded-2xl py-5 font-bold text-base tracking-wide shadow-[0_5px_0_#C0261C] active:shadow-none active:translate-y-[5px] transition-all duration-75 disabled:opacity-40"
+          >
+            Again
+          </button>
+          <button
+            onClick={() => handleRate('good')}
+            disabled={ratingLoading}
+            className="bg-[#4f6ef7] text-white rounded-2xl py-5 font-bold text-base tracking-wide shadow-[0_5px_0_#2c41cc] active:shadow-none active:translate-y-[5px] transition-all duration-75 disabled:opacity-40"
+          >
+            Good
+          </button>
+          <button
+            onClick={() => handleRate('easy')}
+            disabled={ratingLoading}
+            className="bg-[#34C759] text-white rounded-2xl py-5 font-bold text-base tracking-wide shadow-[0_5px_0_#248A3D] active:shadow-none active:translate-y-[5px] transition-all duration-75 disabled:opacity-40"
+          >
+            Easy
+          </button>
+        </div>
       </div>
     </div>
   );
