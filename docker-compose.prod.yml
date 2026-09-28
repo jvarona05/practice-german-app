@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://german-api.jose-manuel-rodriguez-varona-005.com
+        NEXT_PUBLIC_API_URL: https://german-api.jose-manuel-rodriguez-varona-005.com/api
 
     container_name: german-learning-web
     restart: unless-stopped
